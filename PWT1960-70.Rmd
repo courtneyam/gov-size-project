@@ -1,0 +1,119 @@
+---
+title: "Untitled"
+output: word_document
+---
+
+```{r}
+library(foreign)
+library(plyr)
+library(dplyr)
+pwt = read.csv("pwt9.csv")
+# Create subsets of data by year
+library(doBy)
+newpwt1 <- na.omit(pwt)
+newpwt<-data.frame(newpwt1 %>% group_by(country) %>% filter(n()>30))
+oldpwt <- subset(newpwt, year<1971)
+# Get means for each subset
+data2 <-(summaryBy(I_Y~country, data=oldpwt,Fun=c(mean)))
+data3 <- (summaryBy(G_Y~country, data=oldpwt,Fun=c(mean)))
+folddata <- subset(data2, select=c(country, I_Y.mean))
+folddata$G_Y.mean = data3$G_Y.mean
+```
+
+
+
+```{r}
+# Model Exponential trend by Country 1960 -1970
+d <- data.frame(oldpwt)
+expgov <- dlply(d, "country", function(df) 
+  lm(log(gov) ~ year, data = df))
+expRGDP <- dlply(d, "country", function(df) 
+  lm(log(RGDP)~year, data = df))
+exppop <- dlply(d, "country", function(df) 
+  lm(log(pop)~year, data = df))
+# Apply coef to each model and return a data frame
+govdata <- ldply(expgov, coef)
+RGDPdata <- ldply(expRGDP, coef)
+popdata <- ldply(exppop, coef)
+
+# Add to mean files with exponent of coefficients
+folddata$g.gov <- exp(govdata$year)-1
+folddata$g.RGDP <- exp(RGDPdata$year)-1
+folddata$g.pop <- exp(popdata$year)-1
+# Create G(G/Y) variable
+folddata$g.govG_Y <- folddata$g.gov*folddata$G_Y.mean
+```
+
+
+
+```{r}
+d67 <- data.frame(folddata)
+# Model all DC & LDC
+fits <- list()
+fits$m.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=d67)
+fits$m.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =d67)
+fits$m.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = d67)
+fits$m.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = d67)
+#table5<-coef(summary(res))
+table67_<- do.call(cbind, lapply(fits, function(x) as.data.frame(
+                    t(coef(summary(x))))));table67<-t(table67_)
+table67.r2<-data.frame(laply(fits, function(x) summary(x)$r.squared))
+colnames(table67.r2)[1]<-"R2"
+table67.f<-laply(fits, function(x) summary(x)$fstatistic)
+```
+
+```{r}
+# Create data frames LDC
+ldcoldpwt = filter(folddata, country!="Finland"&country!= "France"&country!="Germany" &country!="Greece"&country!= "Iceland"&country!="Ireland"&country!="Italy"& country!="Japan"&country!="Luxembourg"&country!="Netherlands"&country!="New Zealand"&country!="Norway"&country!="Portugal"&country!="Spain"&country!="Sweden"&country!="Switzerland"&country!="Turkey"&country!="United Kingdom"&country!=  "United States")
+
+ldc67 <- data.frame(ldcoldpwt)
+# Model all LDC
+ldcfits <- list()
+ldcfits$m.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=ldc67)
+ldcfits$m.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =ldc67)
+ldcfits$m.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = ldc67)
+ldcfits$m.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = ldc67)
+#table5<-coef(summary(res))
+ldctable67_<- do.call(cbind, lapply(ldcfits, function(x) as.data.frame(
+                    t(coef(summary(x))))));ldctable67<-t(ldctable67_)
+ldctable67.r2<-data.frame(laply(ldcfits, function(x) summary(x)$r.squared))
+colnames(ldctable67.r2)[1]<-"R2"
+ldctable67.f<-laply(ldcfits, function(x) summary(x)$fstatistic)
+
+```
+
+```{r}
+lim1 = filter(folddata, country!="Antigua and Barbuda"& country!="Bahamas"& country!="Bahrain"& country!="Benin"& country!="Bhutan"& country!="British Virgin Islands"& country!="Brunei Darussalam"& country!="Burkina Faso"& country!="Cabo Verde"& country!="Cameroon"& country!="Cayman Islands"& country!="Central African Republic"& country!="
+Chile"& country!="China, Hong Kong SAR"& country!="Congo"& country!="Denmark"& country!="Dominica"& country!="Dominican Republic"& country!="Gabon"& country!="Gambia"& country!="Ghana"& country!="Grenada"& country!="Hungary"& country!="Iraq"& country!="Kuwait"& country!="Lesotho"& country!="Malawi"& country!="Mauritania"& country!="Montserrat"& country!="Niger"& country!="Rwanda"& country!="Saudi Arabia"& country!="Seychelles"& country!="Singapore"& country!="State of Palestine"& country!="Suriname"& country!="Swaziland"& country!="Taiwan"& country!="Togo"& country!="United Arab Emirates")
+lim67 <- data.frame(lim1)
+# Model all Limited
+limfits1 <- list()
+limfits1$m2.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=lim67)
+limfits1$m2.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =lim67)
+limfits1$m2.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = lim67)
+limfits1$m2.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = lim67)
+#table5<-coef(summary(res))
+limtable67_<- do.call(cbind, lapply(limfits1, function(x) as.data.frame(
+                    t(coef(summary(x))))));limtable67<-t(limtable67_)
+limtable67.r2<-data.frame(laply(limfits1, function(x) summary(x)$r.squared))
+colnames(limtable67.r2)[1]<-"R2"
+limtable67.f<-laply(limfits1, function(x) summary(x)$fstatistic)
+```
+
+```{r}
+l.lim1= filter(lim1, country!="Finland"&country!= "France"&country!="Germany" &country!="Greece"&country!= "Iceland"&country!="Ireland"&country!="Italy"& country!="Japan"&country!="Luxembourg"&country!="Netherlands"&country!="New Zealand"&country!="Norway"&country!="Portugal"&country!="Spain"&country!="Sweden"&country!="Switzerland"&country!="Turkey"&country!="United Kingdom"&country!=  "United States")
+l.lim67 <- data.frame(l.lim1)
+# Model all Limited LDC
+l.limfits1 <- list()
+l.limfits1$m2.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=l.lim67)
+l.limfits1$m2.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =l.lim67)
+l.limfits1$m2.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = l.lim67)
+l.limfits1$m2.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = l.lim67)
+#table5<-coef(summary(res))
+l.limtable67_<- do.call(cbind, lapply(l.limfits1, function(x) as.data.frame(
+                    t(coef(summary(x))))));l.limtable67<-t(l.limtable67_)
+l.limtable67.r2<-data.frame(laply(l.limfits1, function(x) summary(x)$r.squared))
+colnames(l.limtable67.r2)[1]<-"R2"
+l.limtable67.f<-laply(l.limfits1, function(x) summary(x)$fstatistic)
+```
+

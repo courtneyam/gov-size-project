@@ -1,0 +1,199 @@
+---
+title: "Untitled"
+output: word_document
+---
+
+```{r}
+library(foreign)
+library(plyr)
+library(dplyr)
+pwt = read.csv("pwt9.csv")
+# Create subsets of data by year
+library(doBy)
+newpwt1 <- na.omit(pwt)
+newpwt<-data.frame(newpwt1 %>% group_by(country) %>% filter(n()>30))
+pwt20 <- subset(newpwt, year<1981)
+```
+
+```{r}
+# For Country Data Modeling 1950-1980
+d20 <- data.frame(pwt20)
+# Model by country
+final6 <- dlply(d20, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.gov, data = df))
+final7 <- dlply(d20, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.govG_Y, data = df))
+# Write to tables
+ctable6 <- ldply(final6, coef)
+ttable6 <- ldply(final6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+ptable6 <- ldply(final6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+ctable7 <- ldply(final7, coef)
+ttable7 <- ldply(final7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+ptable7 <- ldply(final7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+f6<-data.frame(ldply(final6, function(x) summary(x)$fstatistic))
+f7<-data.frame(ldply(final7, function(x) summary(x)$fstatistic))
+# Get Durbin Watson stat for serial correlation 
+dw6 <- dlply(d20, "country", function(df) 
+  dwtest(lm(g.RGDP~I_Y+g.pop+g.gov, data = df)))
+where <- laply(dw6, function(x) laply(x, identity))
+fix<-na.omit(where);colnames(fix)[1] <- "DW"
+ftable1<-data.frame(fix)
+dw7 <- dlply(d20, "country", function(df) 
+   dwtest(lm(g.RGDP~I_Y+g.pop+g.govG_Y, data = df)))
+where2 <- laply(dw7, function(x) laply(x, identity))
+fix2<-na.omit(where2);colnames(fix2)[1] <- "DW"
+ftable2<-data.frame(fix2)
+
+# Create final Table
+ftable<-subset(ctable6, select=country)
+ftable$theta.dG <-ctable6$g.gov
+ftable$tvalue.6 <-ttable6$g.gov
+ftable$pvalue.6 <-format(ptable6$g.gov, scientific = FALSE)
+ftable$fvalue.6 <-format(f6$value, scientific = FALSE)
+ftable$DW.6 <-ftable1$DW
+ftable$deltaprimeplusC.dG_Y<-ctable7$g.gov
+ftable$tvalue.7 <-ttable7$g.gov
+ftable$pvalue.7 <-format(ptable7$g.gov, scientific = FALSE)
+ftable$fvalue.7 <-format(f7$value, scientific = FALSE)
+ftable$DW.7 <-ftable2$DW
+```
+
+```{r}
+# AR1 For Country Data Modeling 1960-1980
+library(Hmisc)
+d20ar <- data.frame(pwt20)
+# Model by country
+arfinal6 <- dlply(d20ar, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.gov+Lag(g.RGDP), data = df))
+arfinal7 <- dlply(d20ar, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.govG_Y+Lag(g.RGDP), data = df))
+# Write to tables
+arctable6 <- ldply(arfinal6, coef)
+arttable6 <- ldply(arfinal6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+arptable6 <- ldply(arfinal6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+arctable7 <- ldply(arfinal7, coef)
+arttable7 <- ldply(arfinal7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+arptable7 <- ldply(arfinal7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+arf6<-data.frame(ldply(arfinal6, function(x) summary(x)$fstatistic))
+arf7<-data.frame(ldply(arfinal7, function(x) summary(x)$fstatistic))
+
+# Create final Table
+colnames(arptable6)[6] <- "Ar1P"
+colnames(arptable7)[6] <- "Ar1P"
+arftable<-subset(ctable6, select=country)
+arftable$ar1.6 <- format(arptable6$Ar1P)
+arftable$theta.dG <-arctable6$g.gov
+arftable$tvalue.6 <-arttable6$g.gov
+arftable$pvalue.6 <-format(arptable6$g.gov, scientific = FALSE)
+arftable$fvalue.6 <-format(arf6$value, scientific = FALSE)
+
+arftable$ar1.7 <- format(arptable7$Ar1P)
+arftable$deltaprimeplusC.dG_Y<-arctable7$g.gov
+arftable$tvalue.7 <-arttable7$g.gov
+arftable$pvalue.7 <-format(arptable7$g.gov, scientific = FALSE)
+arftable$fvalue.7 <-format(arf7$value, scientific = FALSE)
+
+```
+
+
+```{r }
+# For Country Data Modeling 1960-2007
+d47 <- data.frame(newpwt)
+# Model by country
+final2.6 <- dlply(d47, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.gov, data = df))
+final2.7 <- dlply(d47, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.govG_Y, data = df))
+# Write to tables
+ctable2.6 <- ldply(final2.6, coef)
+ttable2.6 <- ldply(final2.6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+ptable2.6 <- ldply(final2.6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+ctable2.7 <- ldply(final2.7, coef)
+ttable2.7 <- ldply(final2.7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+ptable2.7 <- ldply(final2.7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+f2.6<-data.frame(ldply(final2.6, function(x) summary(x)$fstatistic))
+f2.7<-data.frame(ldply(final2.7, function(x) summary(x)$fstatistic))
+# Get Durbin Watson stat for serial correlation 
+dw2.6 <- dlply(d47, "country", function(df) 
+  dwtest(lm(g.RGDP~I_Y+g.pop+g.gov, data = df)))
+where2. <- laply(dw2.6, function(x) laply(x, identity))
+fix2.<-na.omit(where2.);colnames(fix2.)[1] <- "DW"
+ftable2.1<-data.frame(fix2.)
+dw2.7 <- dlply(d47, "country", function(df) 
+   dwtest(lm(g.RGDP~I_Y+g.pop+g.govG_Y, data = df)))
+where2.2 <- laply(dw2.7, function(x) laply(x, identity))
+fix2.2<-na.omit(where2.2);colnames(fix2.2)[1] <- "DW"
+ftable2.2<-data.frame(fix2.2)
+
+# Create final Table
+ftablez<-subset(ctable2.6, select=country)
+ftablez$theta.dG <-ctable2.6$g.gov
+ftablez$tvalue.6 <-ttable2.6$g.gov
+ftablez$pvalue.6 <-format(ptable2.6$g.gov, scientific = FALSE)
+ftablez$fvalue.6 <-format(f2.6$value, scientific = FALSE)
+ftablez$DW.6 <-ftable2.1$DW
+ftablez$deltaprimeplusC.dG_Y<-ctable2.7$g.gov
+ftablez$tvalue.7 <-ttable2.7$g.gov
+ftablez$pvalue.7 <-format(ptable2.7$g.gov, scientific = FALSE)
+ftablez$fvalue.7 <-format(f2.7$value, scientific = FALSE)
+ftablez$DW.7 <-ftable2.2$DW
+```
+
+```{r}
+# AR1 For Country Data Modeling 1960-2007
+d47ar <- data.frame(newpwt)
+# Model by country
+arfinal2.6 <- dlply(d47ar, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.gov+Lag(g.RGDP), data = df))
+arfinal2.7 <- dlply(d47ar, "country", function(df) 
+  lm(g.RGDP~I_Y+g.pop+g.govG_Y+Lag(g.RGDP), data = df))
+# Write to tables
+arctable2.6 <- ldply(arfinal2.6, coef)
+arttable2.6 <- ldply(arfinal2.6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+arptable2.6 <- ldply(arfinal2.6, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+arctable2.7 <- ldply(arfinal2.7, coef)
+arttable2.7 <- ldply(arfinal2.7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "t value"])))
+arptable2.7 <- ldply(arfinal2.7, function(x) as.data.frame(
+                     t(coef(summary(x))[, "Pr(>|t|)"])))
+arf2.6<-data.frame(ldply(arfinal2.6, function(x) summary(x)$fstatistic))
+arf2.7<-data.frame(ldply(arfinal2.7, function(x) summary(x)$fstatistic))
+
+# Create final Table
+colnames(arptable2.6)[6] <- "Ar1P"
+colnames(arptable2.7)[6] <- "Ar1P"
+arftablez<-subset(arctable2.6, select=country)
+arftablez$ar1.6 <- format(arptable2.6$Ar1P, scientific = FALSE)
+arftablez$theta.dG <-arctable2.6$g.gov
+arftablez$tvalue.6 <-arttable2.6$g.gov
+arftablez$pvalue.6 <-format(arptable2.6$g.gov, scientific = FALSE)
+arftablez$fvalue.6 <-format(arf2.6$value, scientific = FALSE)
+
+arftablez$ar1.7 <- format(arptable2.7$Ar1P, scientific = FALSE)
+arftablez$deltaprimeplusC.dG_Y<-arctable2.7$g.gov
+arftablez$tvalue.7 <-arttable2.7$g.gov
+arftablez$pvalue.7 <-format(arptable2.7$g.gov, scientific = FALSE)
+arftablez$fvalue.7 <-format(arf2.7$value, scientific = FALSE)
+```
+```{r}
+#write.csv(ftable, file = "ftable.csv")
+#write.csv(arftable,file = "arftable.csv")
+#write.csv(ftablez,file = "ftablez.csv")
+#write.csv(arftablez,file = "arftablez.csv")
+```
+
+

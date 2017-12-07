@@ -1,0 +1,233 @@
+---
+title: "Untitled"
+output: word_document
+---
+
+```{r }
+library(foreign)
+library(plyr)
+library(dplyr)
+pwt = read.csv("pwt9.csv")
+# Create subsets of data by year
+library(doBy)
+newpwt1 <- na.omit(pwt)
+newpwt<-data.frame(newpwt1 %>% group_by(country) %>% filter(n()>30))
+# Get means for each subset
+data <-(summaryBy(I_Y~country, data=newpwt,Fun=c(mean)))
+data1 <- (summaryBy(G_Y~country, data=newpwt,Fun=c(mean)))
+fnewdata <- subset(data, select =c(country, I_Y.mean))
+fnewdata$G_Y.mean = data1$G_Y.mean
+```
+
+
+
+```{r}
+# Model Exponential trend by Country 1960 -2014
+d2 <- data.frame(newpwt)
+expgov2 <- dlply(d2, "country", function(df) 
+  lm(log(gov) ~ year, data = df))
+expRGDP2 <- dlply(d2, "country", function(df) 
+  lm(log(RGDP)~year, data = df))
+exppop2 <- dlply(d2, "country", function(df) 
+  lm(log(pop)~year, data = df))
+# Apply coef to each model and return a data frame
+govdata2 <- ldply(expgov2, coef)
+RGDPdata2 <- ldply(expRGDP2, coef)
+popdata2 <- ldply(exppop2, coef)
+# Add to mean files with exponent of coefficients
+fnewdata$g.gov <- exp(govdata2$year)-1
+fnewdata$g.RGDP <- exp(RGDPdata2$year)-1
+fnewdata$g.pop <- exp(popdata2$year)-1
+# Create G(G/Y) variable
+fnewdata$g.govG_Y <- fnewdata$g.gov*fnewdata$G_Y.mean
+```
+
+
+
+```{r}
+d07<- data.frame(fnewdata)
+# Model all DC & LDC
+fitsall <- list()
+fitsall$m.all.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=d07)
+fitsall$m.all.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =d07)
+fitsall$m.all.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = d07)
+fitsall$m.all.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = d07)
+#table5<-coef(summary(res))
+table07_<- do.call(cbind, lapply(fitsall, function(x) as.data.frame(
+                    t(coef(summary(x))))));table07<-t(table07_)
+table07.r2<-data.frame(laply(fitsall, function(x) summary(x)$r.squared))
+colnames(table07.r2)[1]<-"R2"
+table07.f<-laply(fitsall, function(x) summary(x)$fstatistic)
+
+```
+
+```{r}
+# Create data frames LDC
+ldcnewpwt = filter(fnewdata, country!="Finland"&country!= "France"&country!="Germany" &country!="Greece"&country!= "Iceland"&country!="Ireland"&country!="Italy"& country!="Japan"&country!="Luxembourg"&country!="Netherlands"&country!="New Zealand"&country!="Norway"&country!="Portugal"&country!="Spain"&country!="Sweden"&country!="Switzerland"&country!="Turkey"&country!="United Kingdom"&country!=  "United States")
+ldc07<- data.frame(ldcnewpwt)
+# Model all LDC
+ldcfitsall <- list()
+ldcfitsall$m.all.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=ldc07)
+ldcfitsall$m.all.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =ldc07)
+ldcfitsall$m.all.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = ldc07)
+ldcfitsall$m.all.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = ldc07)
+#table5<-coef(summary(res))
+ldctable07_<- do.call(cbind, lapply(ldcfitsall, function(x) as.data.frame(
+                    t(coef(summary(x))))));ldctable07<-t(ldctable07_)
+ldctable07.r2<-data.frame(laply(ldcfitsall, function(x) summary(x)$r.squared))
+colnames(ldctable07.r2)[1]<-"R2"
+ldctable07.f<-laply(ldcfitsall, function(x) summary(x)$fstatistic)
+```
+
+```{r}
+lim3 = filter(fnewdata, country!="Angola"& country!="Anguilla"& country!="Antigua and Barbuda"& country!="Aruba"& country!="Bahamas"& country!="Belize"& country!="Bhutan"& country!="British Virgin Islands"& country!="Brunei Darussalam"& country!="Burkina Faso"& country!="Cabo Verde"& country!="Central African Republic"& country!="China, Hong Kong SAR"& country!="China, Macao SAR"& country!="Congo"& country!="Dominica"& country!="Dominican Republic"& country!="Gabon"& country!="Ghana"& country!="Guinea"& country!="Haiti"& country!="Lesotho"& country!="Namibia"& country!="Qatar"& country!="Sudan (Former)"& country!="Swaziland"& country!="Togo")
+lim07 <- data.frame(lim3)
+# Model all Limited
+limfits3 <- list()
+limfits3$m2.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=lim07)
+limfits3$m2.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =lim07)
+limfits3$m2.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = lim07)
+limfits3$m2.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = lim07)
+#table5<-coef(summary(res))
+limtable07_<- do.call(cbind, lapply(limfits3, function(x) as.data.frame(
+                    t(coef(summary(x))))));limtable07<-t(limtable07_)
+limtable07.r2<-data.frame(laply(limfits3, function(x) summary(x)$r.squared))
+colnames(limtable07.r2)[1]<-"R2"
+limtable07.f<-laply(limfits3, function(x) summary(x)$fstatistic)
+```
+
+```{r}
+l.lim3= filter(lim3, country!="Finland"&country!= "France"&country!="Germany" &country!="Greece"&country!= "Iceland"&country!="Ireland"&country!="Italy"& country!="Japan"&country!="Luxembourg"&country!="Netherlands"&country!="New Zealand"&country!="Norway"&country!="Portugal"&country!="Spain"&country!="Sweden"&country!="Switzerland"&country!="Turkey"&country!="United Kingdom"&country!=  "United States")
+l.lim07 <- data.frame(l.lim3)
+# Model all Limited LDC
+l.limfits3 <- list()
+l.limfits3$m2.5<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y+g.gov, data=l.lim07)
+l.limfits3$m2.6<- lm(g.RGDP~I_Y.mean+g.pop+g.gov, data =l.lim07)
+l.limfits3$m2.7<- lm(g.RGDP~I_Y.mean+g.pop+g.govG_Y, data = l.lim07)
+l.limfits3$m2.8<- lm(g.RGDP~I_Y.mean+g.pop+G_Y.mean, data = l.lim07)
+#table5<-coef(summary(res))
+l.limtable07_<- do.call(cbind, lapply(l.limfits3, function(x) as.data.frame(
+                    t(coef(summary(x))))));l.limtable07<-t(l.limtable07_)
+l.limtable07.r2<-data.frame(laply(l.limfits3, function(x) summary(x)$r.squared))
+colnames(l.limtable07.r2)[1]<-"R2"
+l.limtable07.f<-laply(l.limfits3, function(x) summary(x)$fstatistic)
+```
+
+```{r}
+library(plm)
+newfit <- list()
+# Demean squared variables 
+newpwt$g.govG_Ysq<-(newpwt$g.govG_Y - mean(newpwt$g.govG_Y))^2
+newpwt$g.govsq<-(newpwt$g.gov - mean(newpwt$g.gov))^2
+newpwt$G_Ysq<-(newpwt$G_Y - mean(newpwt$G_Y))^2
+
+# DC's and LDC's fixed effects
+newfit$m.5 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.govG_Y+g.gov+g.govG_Ysq+g.govsq, data = newpwt, index = c("country", "year"), model = "within")
+newfit$m.6 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.gov+g.govsq , data = newpwt, index = c("country", "year"), model = "within")
+newfit$m.7 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.govG_Y+g.govG_Ysq, data = newpwt, index = c("country", "year"), model = "random")
+newfit$m.8 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+G_Y+G_Ysq, data = newpwt, index = c("country", "year"), model = "within")
+m1960_07_<- do.call(cbind, lapply(newfit, function(x) as.data.frame(
+                    t(coef(summary(x))))));m1960_07<-t(m1960_07_)
+m1960_07.r2<-data.frame(laply(newfit, function(x) summary(x)$r.squared))
+#m1960_07.f <- ldply(newfit, function(x) summary(x)[["fstatistic"]][2])
+sm5<-summary(newfit$m.5);sm6<-summary(newfit$m.6)
+sm7<-summary(newfit$m.7);sm8<-summary(newfit$m.8);
+flist<- list()
+flist$m.5<- sm5[["fstatistic"]][2]; flist$m.6<- sm6[["fstatistic"]][2]
+flist$m.7<- sm7[["fstatistic"]][2]; flist$m.8<- sm8[["fstatistic"]][2]
+m1960_07.f<-data.frame(t(flist));m1960_07.r2$fstat<-t(m1960_07.f)
+
+```
+
+```{r}
+library(lmtest)
+library(sandwich)
+newfit2 <- list()
+# DC's and LDC's random effects
+newfit2$m.5 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.govG_Y+g.gov+g.govG_Ysq+g.govsq, data = newpwt, index = c("country", "year"), model = "random")
+newfit2$m.6 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.gov+g.govsq, data = newpwt, index = c("country", "year"), model = "random")
+newfit2$m.7 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.govG_Y+g.govG_Ysq, data = newpwt, index = c("country", "year"), model = "random")
+newfit2$m.8 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+G_Y+G_Ysq, data = newpwt, index = c("country", "year"), model = "random")
+
+# Hausman test
+phtest(newfit$m.5, newfit2$m.5)
+phtest(newfit$m.6, newfit2$m.6)
+#phtest(newfit$m.7, newfit2$m.7)
+phtest(newfit$m.8, newfit2$m.8)
+# Fixed effects is better
+# Serial Correlation test
+pbgtest(newfit$m.5, 1)
+pbgtest(newfit$m.6, 1)
+pbgtest(newfit$m.7, 1)
+pbgtest(newfit$m.8, 1)
+#Check for heroskedasticity
+plmtest(newfit$m.5, type = "bp")
+plmtest(newfit$m.6, type = "bp")
+plmtest(newfit$m.7, type = "bp")
+plmtest(newfit$m.8, type = "bp")
+coeftest(newfit$m.5, vcov.=vcovSCC(newfit$m.5, maxlag =1, type="HC1"))
+coeftest(newfit$m.6, vcov.=vcovSCC(newfit$m.6, maxlag =1, type="HC1"))
+coeftest(newfit$m.7, vcov.=vcovSCC(newfit$m.7, maxlag =1, type="HC1"))
+coeftest(newfit$m.8, vcov.=vcovSCC(newfit$m.8, maxlag =1, type="HC1"))
+
+```
+```{r}
+# multicollin
+library(usdm)
+col5=data.frame(newpwt$I_Y,newpwt$g.pop,newpwt$g.govG_Y,newpwt$g.gov,newpwt$g.govG_Ysq,newpwt$g.govsq)
+vif(col5)
+col6=data.frame(newpwt$I_Y,newpwt$g.pop,newpwt$g.gov,newpwt$g.govsq)
+vif(col6)
+col7=data.frame(newpwt$I_Y,newpwt$g.pop,newpwt$g.govG_Y,newpwt$g.govG_Ysq)
+vif(col7)
+col8=data.frame(newpwt$I_Y,newpwt$g.pop,newpwt$G_Y, newpwt$G_Ysq)
+vif(col8)
+```
+```{r}
+bal<-pdata.frame(newpwt, index = c("country", "year") )
+## check whether realGDP is trend-stationary
+cipstest(bal$g.RGDP, type = "trend", lag =4)
+
+```
+```{r}
+# Create new LDC data frame               
+ldcpwt =newpwt[newpwt$country %in% c("Angola", "Bangladesh","Benin","Bhutan","Burkina Faso","Burundi","Cambodia","Central African Republic","Chad","Comoros","D.R. of the Congo","Djibouti","Equatorial Guinea","Ethiopia","Gambia","Guinea-Bissau","Haiti","Lao People’s DR","Lesotho","Liberia","Madagascar","Malawi","Maldives","Mali","Mauritania","Mozambique","Myanmar","Nepal","Niger","Rwanda","Sao Tome and Principe","Senegal","Sierra Leone","Sudan (Former)","Togo","Uganda","U. R. of Tanzania: Mainland","Yemen","Zambia"), ]
+```
+
+```{r}
+# LDC's fixed effects
+fitldc <- list()
+fitldc$m.5 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.govG_Y+g.gov+g.govG_Ysq+g.govsq, data = ldcpwt, index = c("country", "year"), model = "within")
+fitldc$m.6 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.gov+g.govsq, data = ldcpwt, index = c("country", "year"), model = "within")
+fitldc$m.7 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+g.govG_Y+g.govG_Ysq, data = ldcpwt, index = c("country", "year"), model = "random")
+fitldc$m.8 = plm(g.RGDP~I_Y+lag(I_Y,1)+g.pop+G_Y+G_Ysq, data = ldcpwt, index = c("country", "year"), model = "within")
+ldc1960_07_<- do.call(cbind, lapply(fitldc, function(x) as.data.frame(
+                    t(coef(summary(x))))));ldc1960_07<-t(ldc1960_07_)
+ldc1960_07.r2<-data.frame(laply(fitldc, function(x) summary(x)$r.squared))
+#m1960_07.f <- ldply(newfit, function(x) summary(x)[["fstatistic"]][2])
+sm5<-summary(fitldc$m.5);sm6<-summary(fitldc$m.6)
+sm7<-summary(fitldc$m.7);sm8<-summary(fitldc$m.8);
+ldclist<- list()
+ldclist$m.5<- sm5[["fstatistic"]][2]; ldclist$m.6<- sm6[["fstatistic"]][2]
+ldclist$m.7<- sm7[["fstatistic"]][2]; ldclist$m.8<- sm8[["fstatistic"]][2]
+ldc1960_07.f<-data.frame(t(ldclist));ldc1960_07.r2$fstat<-t(ldc1960_07.f)
+```
+```{r}
+# Serial Correlation test
+pbgtest(fitldc$m.5, 1)
+pbgtest(fitldc$m.6, 1)
+pbgtest(fitldc$m.7, 1)
+pbgtest(fitldc$m.8, 1)
+#Check for heroskedasticity
+plmtest(fitldc$m.5, type = "bp")
+plmtest(fitldc$m.6, type = "bp")
+plmtest(fitldc$m.7, type = "bp")
+plmtest(fitldc$m.8, type = "bp")
+
+coeftest(fitldc$m.5, vcov.=vcovSCC(fitldc$m.5, maxlag =1, type="HC1"))
+coeftest(fitldc$m.6, vcov.=vcovSCC(fitldc$m.6, maxlag =1, type="HC1"))
+coeftest(fitldc$m.7, vcov.=vcovSCC(fitldc$m.7, maxlag =1, type="HC1"))
+coeftest(fitldc$m.8, vcov.=vcovSCC(fitldc$m.8, maxlag =1, type="HC1"))
+
+```
+
